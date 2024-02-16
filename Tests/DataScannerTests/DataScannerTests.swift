@@ -150,5 +150,12 @@ final class DataScannerTests: XCTestCase {
 
 		let firstString = try scanner.scanStringUntilNullTerminated()
 		XCTAssertEqual("foo bar ", firstString)
+		XCTAssertEqual(9, scanner.currentOffset)
+
+		let nullCount = try scanner.scanNullBytes()
+		XCTAssertEqual(1, nullCount)
+
+		let secondString = try scanner.scanStringUntilNullTerminated()
+		XCTAssertEqual("foo bar ", secondString)
 	}
 }

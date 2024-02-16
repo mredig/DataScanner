@@ -62,6 +62,17 @@ public struct DataScanner {
 		}
 	}
 
+	/// Instead of returning the bytes themselves, this returns the number of null bytes.
+	@discardableResult
+	public mutating func scanNullBytes() throws -> Int {
+		var count = 0
+		while try peekByte() == 0 {
+			currentOffset += 1
+			count += 1
+		}
+		return count
+	}
+
 	@discardableResult
 	public mutating func scanStringUntilNullTerminated() throws -> String {
 		let (string, byteCount) = try _peekStringUntilNullTerminated()
@@ -84,7 +95,9 @@ public struct DataScanner {
 				buffer.append(character)
 				character = try copy.scanUTF8Character()
 			}
-		} catch Error.nullTerminated, Error.isAtEnd {
+		} catch Error.nullTerminated {
+			return (buffer, copy.currentOffset - startOffset + 1) // include null char
+		} catch Error.isAtEnd {
 			return (buffer, copy.currentOffset - startOffset)
 		}
 	}
