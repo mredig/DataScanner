@@ -39,7 +39,7 @@ public struct DataScanner {
 	public mutating func scan<T: BinaryInteger>(endianness: Endianness = .big) throws -> T {
 		let size = MemoryLayout<T>.size
 
-		var bytes = try advanceBytes(size)
+		var bytes = try scanBytes(size)
 		if endianness != systemEndianness {
 			bytes.reverse()
 		}
@@ -52,7 +52,7 @@ public struct DataScanner {
 	public mutating func scan<T: BinaryFloatingPoint>(endianness: Endianness = .big) throws -> T {
 		let size = MemoryLayout<T>.size
 
-		var bytes = try advanceBytes(size)
+		var bytes = try scanBytes(size)
 		if endianness != systemEndianness {
 			bytes.reverse()
 		}
@@ -173,7 +173,7 @@ public struct DataScanner {
 
 	/// Outputs the current byte, then advances by one.
 	@discardableResult
-	public mutating func advanceByte() throws -> UInt8 {
+	public mutating func scanByte() throws -> UInt8 {
 		let byte = try peekByte()
 
 		currentOffset += 1
@@ -190,7 +190,7 @@ public struct DataScanner {
 	/// Provides each byte in a Data object. If `count` is negative, bytes start at the lower index and end
 	/// at `currentIndex - 1`. `count` must keep the resulting index within the range of available data.
 	@discardableResult
-	public mutating func advanceBytes(_ count: Int) throws -> Data {
+	public mutating func scanBytes(_ count: Int) throws -> Data {
 		let endOffset = currentOffset + count
 		let bytes = try peekBytes(count)
 
