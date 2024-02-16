@@ -2,7 +2,7 @@ import Foundation
 import SwiftPizzaSnips
 
 public struct DataScanner {
-	public let data: Data
+	private let data: Scannable
 
 	public var currentOffset = 0
 
@@ -12,6 +12,13 @@ public struct DataScanner {
 
 	public init(data: Data) {
 		self.data = data
+		let system = CFByteOrderGetCurrent()
+		self.systemEndianness = Endianness(system) ?? .little
+	}
+
+	public init(url: URL) throws {
+		let handle = try ScannableFileHandle(url: url)
+		self.data = handle
 		let system = CFByteOrderGetCurrent()
 		self.systemEndianness = Endianness(system) ?? .little
 	}
@@ -217,6 +224,7 @@ public struct DataScanner {
 		case overflowError
 		case invalidCharacter
 		case nullTerminated
+		case mustBeFileURL
 	}
 
 	package enum CharacterAnalyst {

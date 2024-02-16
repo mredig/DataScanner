@@ -2,13 +2,26 @@ import XCTest
 import DataScanner
 import SwiftPizzaSnips
 
-final class DataScannerTests: XCTestCase {
+final class DataScannerDiskTests: XCTestCase {
+	private func saveTmpFile(from data: Data) throws -> URL {
+		let uniqueName = UUID().uuidString
+		let tmpDir = FileManager.default.temporaryDirectory.appending(component: uniqueName)
+
+		try data.write(to: tmpDir)
+		addTeardownBlock {
+			try? FileManager.default.removeItem(at: tmpDir)
+		}
+		return tmpDir
+	}
+
+
 	func testScanDouble() throws {
 		let inputHex = "1880E32EE5124AD0B903FA814E67FCF9"
 
 		let data = try Data(hexString: inputHex)
+		let fileURL = try saveTmpFile(from: data)
 
-		var scanner = DataScanner(data: data)
+		var scanner = try DataScanner(url: fileURL)
 
 		let doubleBE1: Double = try scanner.scan(endianness: .big)
 		XCTAssertEqual(1.1844491647066381e-190, doubleBE1)
@@ -25,8 +38,9 @@ final class DataScannerTests: XCTestCase {
 		let inputHex = "1880E32EE5124AD0B903FA814E67FCF9"
 
 		let data = try Data(hexString: inputHex)
+		let fileURL = try saveTmpFile(from: data)
 
-		var scanner = DataScanner(data: data)
+		var scanner = try DataScanner(url: fileURL)
 
 		let intBE1: Int = try scanner.scan(endianness: .big)
 		XCTAssertEqual(1765660844480416464, intBE1)
@@ -43,8 +57,9 @@ final class DataScannerTests: XCTestCase {
 		let inputHex = "1880E32EE5124AD0B903FA814E67FCF9"
 
 		let data = try Data(hexString: inputHex)
+		let fileURL = try saveTmpFile(from: data)
 
-		var scanner = DataScanner(data: data)
+		var scanner = try DataScanner(url: fileURL)
 
 		let beList: [Int32] = [
 			411099950,
@@ -76,8 +91,9 @@ final class DataScannerTests: XCTestCase {
 	func testScanChars() throws {
 		let inputHex = "666F6F2062617220000000"
 		let data = try Data(hexString: inputHex)
+		let fileURL = try saveTmpFile(from: data)
 
-		var scanner = DataScanner(data: data)
+		var scanner = try DataScanner(url: fileURL)
 
 		let expected = "foo bar "
 		var currentIndex = expected.startIndex
@@ -91,8 +107,9 @@ final class DataScannerTests: XCTestCase {
 		let inputHex = "f09f9fa7f09fa5b0e1baa2e284b3e28899c380"
 
 		let data = try Data(hexString: inputHex)
+		let fileURL = try saveTmpFile(from: data)
 
-		var scanner = DataScanner(data: data)
+		var scanner = try DataScanner(url: fileURL)
 
 		let expected = "🟧🥰Ảℳ∙À"
 		var currentIndex = expected.startIndex
@@ -102,51 +119,12 @@ final class DataScannerTests: XCTestCase {
 		}
 	}
 
-	func testCharacterAnalyst() throws {
-		let illegalByte: UInt8 = 248
-		let oneByte: UInt8 = 0b01111111
-		let twoByte: UInt8 = 0b11011111
-		let threeByte: UInt8 = 0b11101111
-		let fourByte: UInt8 = 0b11110111
-		let contByte: UInt8 = 0b10111111
-
-		typealias Analyst = DataScanner.CharacterAnalyst
-
-		XCTAssertEqual(Analyst.analyzeByte(illegalByte), .illegalByte)
-		XCTAssertEqual(Analyst.analyzeByte(oneByte), .oneByte)
-		XCTAssertEqual(Analyst.analyzeByte(twoByte), .twoByte)
-		XCTAssertEqual(Analyst.analyzeByte(threeByte), .threeByte)
-		XCTAssertEqual(Analyst.analyzeByte(fourByte), .fourByte)
-		XCTAssertEqual(Analyst.analyzeByte(contByte), .continuationByte)
-
-		var alphanum = "abcdefghijklmnopqrstuvwxyz0123456789"
-		alphanum += alphanum.uppercased()
-
-		let alphaData = Data(alphanum.utf8)
-		alphaData.forEach {
-			XCTAssertEqual(Analyst.analyzeByte($0), .oneByte)
-		}
-
-		let fourBytes = ("🟧🥰", Analyst.fourByte)
-		let threeBytes = ("Ảℳ∙", Analyst.threeByte)
-		let twoBytes = ("À", Analyst.twoByte)
-		let tests = [fourBytes, threeBytes, twoBytes]
-
-		for (string, expected) in tests {
-			for char in string {
-				let charData = Data(char.utf8)
-				for (index, byte) in charData.enumerated() {
-					XCTAssertEqual(Analyst.analyzeByte(byte), index == 0 ? expected : .continuationByte)
-				}
-			}
-		}
-	}
-
 	func testScanNullTerminatedString() throws {
 		let inputHex = "666F6F20626172200000666F6F20626172200000"
-		let inputData = try Data(hexString: inputHex)
+		let data = try Data(hexString: inputHex)
+		let fileURL = try saveTmpFile(from: data)
 
-		var scanner = DataScanner(data: inputData)
+		var scanner = try DataScanner(url: fileURL)
 
 		let firstString = try scanner.scanStringUntilNullTerminated()
 		XCTAssertEqual("foo bar ", firstString)
