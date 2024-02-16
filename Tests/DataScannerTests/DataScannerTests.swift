@@ -141,4 +141,14 @@ final class DataScannerTests: XCTestCase {
 			}
 		}
 	}
+
+	func testScanNullTerminatedString() throws {
+		let inputHex = "666F6F20626172200000666F6F20626172200000"
+		let inputData = try Data(hexString: inputHex)
+
+		var scanner = DataScanner(data: inputData)
+
+		let firstString = try scanner.scanStringUntilNullTerminated()
+		XCTAssertEqual("foo bar ", firstString)
+	}
 }

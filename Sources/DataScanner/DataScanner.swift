@@ -62,6 +62,51 @@ public struct DataScanner {
 		}
 	}
 
+	@discardableResult
+	public mutating func scanStringUntilNullTerminated() throws -> String {
+		let (string, byteCount) = try _peekStringUntilNullTerminated()
+
+		currentOffset += byteCount
+		return string
+	}
+
+	public func peekStringUntilNullTerminated() throws -> String {
+		try _peekStringUntilNullTerminated().str
+	}
+
+	private func _peekStringUntilNullTerminated() throws -> (str: String, byteCount: Int) {
+		var buffer = ""
+		var copy = self
+		let startOffset = currentOffset
+		do {
+			var character = try copy.scanUTF8Character()
+			while true {
+				buffer.append(character)
+				character = try copy.scanUTF8Character()
+			}
+		} catch Error.nullTerminated, Error.isAtEnd {
+			return (buffer, copy.currentOffset - startOffset)
+		}
+	}
+
+	@discardableResult
+	public mutating func scanString(byteCount: Int, encoding: String.Encoding = .utf8) throws -> String {
+		let string = try peekString(byteCount: byteCount, encoding: encoding)
+
+		currentOffset += byteCount
+		return string
+	}
+
+	public func peekString(byteCount: Int, encoding: String.Encoding = .utf8) throws -> String {
+		let bytes = try peekBytes(byteCount)
+
+		guard
+			let string = String(data: bytes, encoding: encoding)
+		else { throw Error.invalidCharacter }
+
+		return string
+	}
+
 	public mutating func scanUTF8Character() throws -> Character {
 		let (char, count) = try _peekUTF8Character()
 
