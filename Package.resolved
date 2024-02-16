@@ -1,0 +1,14 @@
+{
+  "pins" : [
+    {
+      "identity" : "swiftpizzasnips",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/mredig/SwiftPizzaSnips.git",
+      "state" : {
+        "revision" : "956b77f1527bac2f87e6f8d9a84b6bee28425404",
+        "version" : "0.3.13"
+      }
+    }
+  ],
+  "version" : 2
+}
