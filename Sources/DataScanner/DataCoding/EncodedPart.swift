@@ -34,7 +34,7 @@ public struct EncodedPart<MagicNumber: BinaryCodingKey, Flags: PartFlags> {
 		}
 	}
 
-	public static func retrieveHeader(from data: Data) throws -> HeaderData {
+	public static func retrieveHeader(from data: Data, ignoreExtraData: Bool = false) throws -> HeaderData {
 		let magicNumSize = 4
 		let sizeSize = MemoryLayout.size(ofValue: data.count)
 		let flagSize = MemoryLayout<Flags>.size
@@ -52,9 +52,11 @@ public struct EncodedPart<MagicNumber: BinaryCodingKey, Flags: PartFlags> {
 		else { throw Error.invalidMagicNumber(magicBytes, MagicNumber.self) }
 
 		let dataSize: Int = try scanner.scan(endianness: .big)
-		guard
-			data.count - headerSize == dataSize
-		else { throw Error.corruptedData }
+		if ignoreExtraData == false {
+			guard
+				data.count - headerSize == dataSize
+			else { throw Error.corruptedData }
+		}
 
 		let rawFlag: Flags.RawValue = try scanner.scan(endianness: .big)
 		let flags = Flags(rawValue: rawFlag)
@@ -65,10 +67,29 @@ public struct EncodedPart<MagicNumber: BinaryCodingKey, Flags: PartFlags> {
 
 	public init(decoding data: Data, magicNumber: MagicNumber.Type, flag: Flags.Type) throws {
 		let header = try Self.retrieveHeader(from: data)
+		try self.init(decoding: data, header: header)
+	}
+
+	private init(decoding data: Data, header: HeaderData) throws {
 		let remainingData = data[header.dataOffset..<data.endIndex]
 
+		let value: PartValue
+		if header.hasChildren {
+			var parts: [EncodedPart] = []
+			var remainingData = remainingData
+			while remainingData.isOccupied {
+				let partHeader = try Self.retrieveHeader(from: remainingData, ignoreExtraData: true)
+				let partEndOffset = remainingData.index(partHeader.dataOffset, offsetBy: partHeader.size)
+				let partData = remainingData[partHeader.dataOffset..<partEndOffset]
+				try parts.append(EncodedPart(decoding: partData, header: partHeader))
+				remainingData = remainingData[partEndOffset..<data.endIndex]
+			}
+			value = .parts(parts)
+		} else {
+			value = .data(remainingData)
+		}
 
-		self.init(key: header.magicNumber, flags: header.flags, value: .data(remainingData))
+		self.init(key: header.magicNumber, flags: header.flags, value: value)
 	}
 
 	public func renderData() -> Data {
