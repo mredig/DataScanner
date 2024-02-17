@@ -1,27 +1,19 @@
 import Foundation
 
-public protocol BinaryCodingKey: RawRepresentable, Hashable {
-	var rawValue: UInt32 { get }
+public struct BinaryEncoder<MagicNumber: BinaryCodingKey, Flags: PartFlags> {
+	public typealias Part = EncodedPart<MagicNumber, Flags>
+	public var parts: [Part] = []
 
-	init?(rawValue: UInt32)
-	init?(stringValue: String)
-	init?(data: Data)
+	public init() {}
 }
 
-public extension BinaryCodingKey {
-	init?(stringValue: String) {
-		let data = Data(stringValue.utf8)
-		self.init(data: data)
+public extension BinaryEncoder {
+	mutating func encodePart(_ part: Part) {
+		parts.append(part)
 	}
 
-	init?(data: Data) {
-		guard data.count == 4 else {
-			return nil
-		}
-		let value = data.withUnsafeBytes { pointer in
-			pointer.load(as: UInt32.self)
-		}
-		self.init(rawValue: value)
+	mutating func encodeData(_ data: Data, magicNumber: MagicNumber, flags: Flags = []) {
+		let part = EncodedPart(key: magicNumber, flags: flags, value: .data(data))
+		encodePart(part)
 	}
 }
-
