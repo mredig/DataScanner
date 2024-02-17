@@ -6,7 +6,7 @@ public struct DataScanner {
 
 	public var currentOffset: Int
 
-	public var isAtEnd: Bool { currentOffset == data.count }
+	public var isAtEnd: Bool { currentOffset == data.endIndex }
 
 	public init(data: Data) {
 		self.data = data
