@@ -68,7 +68,7 @@ public struct EncodedPart<MagicNumbers: MagicNumber, Flags: PartFlags> {
 		return header
 	}
 
-	public init(decoding data: Data, magicNumberType: MagicNumbers.Type, flagType: Flags.Type) throws {
+	public init(decoding data: Data, magicNumbersType: MagicNumbers.Type, flagsType: Flags.Type) throws {
 		let header = try Self.retrieveHeader(from: data)
 		try self.init(decoding: data, header: header)
 	}

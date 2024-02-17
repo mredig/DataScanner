@@ -32,7 +32,7 @@ final class EncodedPartTests: XCTestCase {
 	func testDecodingData() throws {
 		let inData = try Data(hexString: "6b657932000000000000000a0001020304050607080900")
 
-		let part = try EncodedPart(decoding: inData, magicNumberType: MagicNumbers.self, flagType: BasicFlags.self)
+		let part = try EncodedPart(decoding: inData, magicNumbersType: MagicNumbers.self, flagsType: BasicFlags.self)
 
 		let expected = Data([1, 2, 3, 4, 5, 6, 7, 8, 9, 0])
 		XCTAssertEqual(part.key, .key2)
@@ -77,7 +77,7 @@ final class EncodedPartTests: XCTestCase {
 			"""
 		let data = try Data(hexString: hexString)
 
-		let topDecodedParts = try EncodedPart(decoding: data, magicNumberType: MagicNumbers.self, flagType: BasicFlags.self)
+		let topDecodedParts = try EncodedPart(decoding: data, magicNumbersType: MagicNumbers.self, flagsType: BasicFlags.self)
 		XCTAssertEqual(topDecodedParts.key, .key1)
 		XCTAssertEqual(topDecodedParts.flags, .hasChildParts)
 		let topParts = topDecodedParts.childParts
