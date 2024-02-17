@@ -1,7 +1,7 @@
 import Foundation
 
-public struct EncodedPart<MagicNumber: BinaryCodingKey, Flags: PartFlags> {
-	public let key: MagicNumber
+public struct EncodedPart<MagicNumbers: MagicNumber, Flags: PartFlags> {
+	public let key: MagicNumbers
 	public let flags: Flags
 	/// byte count of just data
 	public var dataSize: Int { value.count }
@@ -14,20 +14,20 @@ public struct EncodedPart<MagicNumber: BinaryCodingKey, Flags: PartFlags> {
 	public var data: Data { value.data }
 	public var childParts: [EncodedPart] { value.childParts }
 
-	public init(key: MagicNumber, flags: Flags, value: PartValue) {
+	public init(key: MagicNumbers, flags: Flags, value: PartValue) {
 		self.key = key
 		self.flags = flags
 		self.value = value
 	}
 
 	public enum Error: Swift.Error {
-		case invalidMagicNumber(UInt32, MagicNumber.Type)
+		case invalidMagicNumber(UInt32, MagicNumbers.Type)
 		case insufficientData
 		case corruptedData
 	}
 
 	public struct HeaderData {
-		public let magicNumber: MagicNumber
+		public let magicNumber: MagicNumbers
 		public let flags: Flags
 		public let size: Int
 		public let dataOffset: Int
@@ -51,8 +51,8 @@ public struct EncodedPart<MagicNumber: BinaryCodingKey, Flags: PartFlags> {
 
 		let magicBytes: UInt32 = try scanner.scan(endianness: .big)
 		guard
-			let magicNumber = MagicNumber(rawValue: magicBytes)
-		else { throw Error.invalidMagicNumber(magicBytes, MagicNumber.self) }
+			let magicNumber = MagicNumbers(rawValue: magicBytes)
+		else { throw Error.invalidMagicNumber(magicBytes, MagicNumbers.self) }
 
 		let dataSize: Int = try scanner.scan(endianness: .big)
 		if ignoreExtraData == false {
@@ -68,7 +68,7 @@ public struct EncodedPart<MagicNumber: BinaryCodingKey, Flags: PartFlags> {
 		return header
 	}
 
-	public init(decoding data: Data, magicNumber: MagicNumber.Type, flag: Flags.Type) throws {
+	public init(decoding data: Data, magicNumberType: MagicNumbers.Type, flagType: Flags.Type) throws {
 		let header = try Self.retrieveHeader(from: data)
 		try self.init(decoding: data, header: header)
 	}

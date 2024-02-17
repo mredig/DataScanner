@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol BinaryCodingKey: RawRepresentable, Hashable {
+public protocol MagicNumber: RawRepresentable, Hashable {
 	var rawValue: UInt32 { get }
 
 	init?(rawValue: UInt32)
@@ -8,7 +8,7 @@ public protocol BinaryCodingKey: RawRepresentable, Hashable {
 	init?(data: Data)
 }
 
-public extension BinaryCodingKey {
+public extension MagicNumber {
 	init?(stringValue: String) {
 		let data = Data(stringValue.utf8)
 		self.init(data: data)
