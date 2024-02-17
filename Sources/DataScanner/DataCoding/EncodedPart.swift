@@ -73,7 +73,7 @@ public struct EncodedPart<MagicNumbers: MagicNumber, Flags: PartFlags> {
 		try self.init(decoding: data, header: header)
 	}
 
-	private init(decoding data: Data, header: HeaderData) throws {
+	package init(decoding data: Data, header: HeaderData) throws {
 		let remainingData = data[header.dataOffset..<data.endIndex]
 
 		let value: PartValue
