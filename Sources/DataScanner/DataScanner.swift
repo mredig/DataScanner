@@ -1,6 +1,7 @@
 import Foundation
 import SwiftPizzaSnips
 
+// TODO: fix copy on write for file handle
 public struct DataScanner {
 	private let data: Scannable
 
@@ -8,46 +9,20 @@ public struct DataScanner {
 
 	public var isAtEnd: Bool { currentOffset == data.count }
 
-	public let systemEndianness: Endianness
-
 	public init(data: Data) {
 		self.data = data
-		let system = CFByteOrderGetCurrent()
-		self.systemEndianness = Endianness(system) ?? .little
 	}
 
 	public init(url: URL) throws {
 		let handle = try ScannableFileHandle(url: url)
 		self.data = handle
-		let system = CFByteOrderGetCurrent()
-		self.systemEndianness = Endianness(system) ?? .little
-	}
-
-	public enum Endianness {
-		case little
-		case big
-
-		init?(_ system: __CFByteOrder) {
-			switch system {
-			case CFByteOrderBigEndian:
-				self = .big
-			case CFByteOrderLittleEndian:
-				self = .little
-			default: return nil
-			}
-		}
-
-		init?(_ byteOrder: CFByteOrder) {
-			let systemType = __CFByteOrder(UInt32(byteOrder))
-			self.init(systemType)
-		}
 	}
 
 	public mutating func scan<T: BinaryInteger>(endianness: Endianness = .big) throws -> T {
 		let size = MemoryLayout<T>.size
 
 		var bytes = try scanBytes(size)
-		if endianness != systemEndianness {
+		if endianness != Endianness.systemEndianness {
 			bytes.reverse()
 		}
 
@@ -60,7 +35,7 @@ public struct DataScanner {
 		let size = MemoryLayout<T>.size
 
 		var bytes = try scanBytes(size)
-		if endianness != systemEndianness {
+		if endianness != Endianness.systemEndianness {
 			bytes.reverse()
 		}
 
