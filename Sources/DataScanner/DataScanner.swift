@@ -1,9 +1,8 @@
 import Foundation
 import SwiftPizzaSnips
 
-// TODO: fix copy on write for file handle
 public struct DataScanner {
-	private let data: Scannable
+	private var data: Scannable
 
 	public var currentOffset: Int
 
@@ -17,7 +16,7 @@ public struct DataScanner {
 	public init(url: URL) throws {
 		let handle = try ScannableFileHandle(url: url)
 		self.data = handle
-		self.currentOffset = 0
+		self.currentOffset = handle.startIndex
 	}
 
 	public mutating func scan<T: BinaryInteger>(endianness: Endianness = .big) throws -> T {
@@ -72,6 +71,7 @@ public struct DataScanner {
 	private func _peekStringUntilNullTerminated() throws -> (str: String, byteCount: Int) {
 		var buffer = ""
 		var copy = self
+		copy.data = copy.data.copyIfNeeded()
 		let startOffset = currentOffset
 		do {
 			var character = try copy.scanUTF8Character()

@@ -7,20 +7,25 @@ protocol Scannable {
 
 	subscript(offset: Int) -> UInt8 { get }
 	subscript(range: Range<Int>) -> Data { get }
+	func copyIfNeeded() -> Self
 }
 
-extension Data: Scannable {}
+extension Data: Scannable {
+	func copyIfNeeded() -> Data { self }
+}
 
 /// All Filehandles should be privately instantiated and therefore qualify for force try usage (it would only fail if it's a socket, pipe, or if descriptor is closed)
-class ScannableFileHandle: Scannable {
+final class ScannableFileHandle: Scannable {
 	var startIndex: Int { 0 }
 	var endIndex: Int { count }
 
 	let count: Int
 
+	private let url: URL
 	private let fileHandle: FileHandle
 
 	init(url: URL) throws {
+		self.url = url
 		guard
 			url.isFileURL
 		else { throw Error.mustBeFileURL }
@@ -64,6 +69,16 @@ class ScannableFileHandle: Scannable {
 		let data = try! fileHandle.read(upToCount: range.count)
 		try! fileHandle.seek(toOffset: currentOffset)
 		return data!
+	}
+
+	func copyIfNeeded() -> ScannableFileHandle {
+		var this = self
+		guard
+			isKnownUniquelyReferenced(&this) == false
+		else { return self }
+
+		let new = try! ScannableFileHandle(url: url)
+		return new
 	}
 
 	enum Error: Swift.Error {
