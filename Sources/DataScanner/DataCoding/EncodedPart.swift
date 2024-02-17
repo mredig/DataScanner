@@ -11,6 +11,9 @@ public struct EncodedPart<MagicNumber: BinaryCodingKey, Flags: PartFlags> {
 	}
 	public let value: PartValue
 
+	public var data: Data { value.data }
+	public var childParts: [EncodedPart] { value.childParts }
+
 	public init(key: MagicNumber, flags: Flags, value: PartValue) {
 		self.key = key
 		self.flags = flags
@@ -123,6 +126,15 @@ public struct EncodedPart<MagicNumber: BinaryCodingKey, Flags: PartFlags> {
 				data
 			case .parts(let array):
 				array.reduce(into: Data(capacity: count), { $0.append(contentsOf: $1.renderData()) })
+			}
+		}
+
+		public var childParts: [EncodedPart] {
+			switch self {
+			case .data:
+				[]
+			case .parts(let array):
+				array
 			}
 		}
 

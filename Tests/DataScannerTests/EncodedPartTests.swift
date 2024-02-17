@@ -38,7 +38,7 @@ final class EncodedPartTests: XCTestCase {
 		let expected = Data([1, 2, 3, 4, 5, 6, 7, 8, 9, 0])
 		XCTAssertEqual(part.key, .key2)
 		XCTAssertEqual(part.flags, [])
-		XCTAssertEqual(part.value.data, expected)
+		XCTAssertEqual(part.data, expected)
 	}
 
 	func testEncodingEmbeddedParts() throws {
@@ -81,41 +81,36 @@ final class EncodedPartTests: XCTestCase {
 		let topDecodedParts = try EncodedPart(decoding: data, magicNumber: MagicNumbers.self, flag: BasicFlags.self)
 		XCTAssertEqual(topDecodedParts.key, .key1)
 		XCTAssertEqual(topDecodedParts.flags, .hasChildParts)
-		guard
-			case .parts(let topParts) = topDecodedParts.value
-		else { throw Error.testFail }
+		let topParts = topDecodedParts.childParts
 		XCTAssertEqual(topParts.count, 3)
 
 		let partA = topParts[0]
 		let partB = topParts[1]
 		let parent1Part = topParts[2]
 
-		XCTAssertEqual(partA.value.data, expectedValueA)
+		XCTAssertEqual(partA.data, expectedValueA)
 		XCTAssertEqual(partA.flags, [])
 		XCTAssertEqual(partA.key, .key2)
 
-		XCTAssertEqual(partB.value.data, expectedValueB)
+		XCTAssertEqual(partB.data, expectedValueB)
 		XCTAssertEqual(partB.flags, [])
 		XCTAssertEqual(partB.key, .key2)
 
 		XCTAssertEqual(parent1Part.flags, .hasChildParts)
 		XCTAssertEqual(parent1Part.key, .key3)
-		guard
-			case .parts(let parentTwoParts) = parent1Part.value
-		else { throw Error.testFail }
-		XCTAssertEqual(parentTwoParts.count, 1)
-		let parentTwoPart = parentTwoParts[0]
-		XCTAssertEqual(parentTwoPart.flags, .hasChildParts)
-		XCTAssertEqual(parentTwoPart.key, .key4)
 
-		guard
-			case .parts(let partCparts) = parentTwoPart.value
-		else { throw Error.testFail }
-		XCTAssertEqual(partCparts.count, 1)
-		let partC = partCparts[0]
+		let parent2Parts = parent1Part.childParts
+		XCTAssertEqual(parent2Parts.count, 1)
+		let parent2Part = parent2Parts[0]
+		XCTAssertEqual(parent2Part.flags, .hasChildParts)
+		XCTAssertEqual(parent2Part.key, .key4)
+
+		let partCParts = parent2Part.childParts
+		XCTAssertEqual(partCParts.count, 1)
+		let partC = partCParts[0]
 		XCTAssertEqual(partC.flags, [])
 		XCTAssertEqual(partC.key, .key5)
-		XCTAssertEqual(partC.value.data, expectedValueC)
+		XCTAssertEqual(partC.data, expectedValueC)
 	}
 
 	enum Error: Swift.Error {
