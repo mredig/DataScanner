@@ -5,17 +5,19 @@ import SwiftPizzaSnips
 public struct DataScanner {
 	private let data: Scannable
 
-	public var currentOffset = 0
+	public var currentOffset: Int
 
 	public var isAtEnd: Bool { currentOffset == data.count }
 
 	public init(data: Data) {
 		self.data = data
+		self.currentOffset = data.startIndex
 	}
 
 	public init(url: URL) throws {
 		let handle = try ScannableFileHandle(url: url)
 		self.data = handle
+		self.currentOffset = 0
 	}
 
 	public mutating func scan<T: BinaryInteger>(endianness: Endianness = .big) throws -> T {
