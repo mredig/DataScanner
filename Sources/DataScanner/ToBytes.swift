@@ -26,3 +26,13 @@ public extension BinaryFloatingPoint {
 		return Data(data.reversed())
 	}
 }
+
+public extension String {
+	func toBytes(nullTerminated: Bool = false) -> Data {
+		var out = Data(self.utf8)
+		if nullTerminated {
+			out.append(contentsOf: [0])
+		}
+		return out
+	}
+}
