@@ -1,7 +1,6 @@
 import XCTest
 import DataScanner
 import SwiftPizzaSnips
-import PizzaMacros
 
 final class EncodedPartTests: XCTestCase {
 	enum MagicNumbers: UInt32, BinaryCodingKey {
