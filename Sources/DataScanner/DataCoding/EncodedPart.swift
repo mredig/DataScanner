@@ -23,7 +23,18 @@ public struct EncodedPart<MagicNumber: BinaryCodingKey, Flags: PartFlags> {
 		case corruptedData
 	}
 
-	public init(decoding data: Data, magicNumber: MagicNumber.Type, flag: Flags.Type) throws {
+	public struct HeaderData {
+		public let magicNumber: MagicNumber
+		public let flags: Flags
+		public let size: Int
+		public let dataOffset: Int
+
+		var hasChildren: Bool {
+			flags.contains(Flags.hasChildParts)
+		}
+	}
+
+	public static func retrieveHeader(from data: Data) throws -> HeaderData {
 		let magicNumSize = 4
 		let sizeSize = MemoryLayout.size(ofValue: data.count)
 		let flagSize = MemoryLayout<Flags>.size
@@ -47,11 +58,17 @@ public struct EncodedPart<MagicNumber: BinaryCodingKey, Flags: PartFlags> {
 
 		let rawFlag: Flags.RawValue = try scanner.scan(endianness: .big)
 		let flags = Flags(rawValue: rawFlag)
-		let hasChildren = flags.contains(Flags.hasChildParts)
 
-		let remainingData = data[scanner.currentOffset..<data.endIndex]
+		let header = HeaderData(magicNumber: magicNumber, flags: flags, size: dataSize, dataOffset: scanner.currentOffset)
+		return header
+	}
 
-		self.init(key: magicNumber, flags: flags, value: .data(remainingData))
+	public init(decoding data: Data, magicNumber: MagicNumber.Type, flag: Flags.Type) throws {
+		let header = try Self.retrieveHeader(from: data)
+		let remainingData = data[header.dataOffset..<data.endIndex]
+
+
+		self.init(key: header.magicNumber, flags: header.flags, value: .data(remainingData))
 	}
 
 	public func renderData() -> Data {
