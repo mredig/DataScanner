@@ -80,12 +80,13 @@ final class EncodedPartTests: XCTestCase {
 		let topDecodedParts = try EncodedPart(decoding: data, magicNumbersType: MagicNumbers.self, flagsType: BasicFlags.self)
 		XCTAssertEqual(topDecodedParts.key, .key1)
 		XCTAssertEqual(topDecodedParts.flags, .hasChildParts)
-		let topParts = topDecodedParts.childParts
-		XCTAssertEqual(topParts.count, 3)
+		XCTAssertEqual(topDecodedParts.childParts.count, 3)
 
-		let partA = topParts[0]
-		let partB = topParts[1]
-		let parent1Part = topParts[2]
+		let key2Parts = topDecodedParts.children(withKey: .key2)
+		XCTAssertEqual(2, key2Parts.count)
+		let partA = key2Parts[0]
+		let partB = key2Parts[1]
+		let parent1Part = topDecodedParts.children(withKey: .key3)[0]
 
 		XCTAssertEqual(partA.data, expectedValueA)
 		XCTAssertEqual(partA.flags, [])
@@ -98,15 +99,14 @@ final class EncodedPartTests: XCTestCase {
 		XCTAssertEqual(parent1Part.flags, .hasChildParts)
 		XCTAssertEqual(parent1Part.key, .key3)
 
-		let parent2Parts = parent1Part.childParts
+		let parent2Parts = parent1Part.children(withKey: .key4)
 		XCTAssertEqual(parent2Parts.count, 1)
 		let parent2Part = parent2Parts[0]
 		XCTAssertEqual(parent2Part.flags, .hasChildParts)
 		XCTAssertEqual(parent2Part.key, .key4)
 
-		let partCParts = parent2Part.childParts
-		XCTAssertEqual(partCParts.count, 1)
-		let partC = partCParts[0]
+		XCTAssertEqual(parent2Part.childParts.count, 1)
+		let partC = parent2Part.child(atIndex: 0)
 		XCTAssertEqual(partC.flags, [])
 		XCTAssertEqual(partC.key, .key5)
 		XCTAssertEqual(partC.data, expectedValueC)

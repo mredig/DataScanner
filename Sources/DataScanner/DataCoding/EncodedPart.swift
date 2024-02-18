@@ -10,7 +10,10 @@ public struct EncodedPart<MagicNumbers: MagicNumber, Flags: PartFlags> {
 	public var dataSize: Int { value.count }
 	/// byte count of key + size + data
 	public var totalSize: Int {
-		dataSize + MemoryLayout.size(ofValue: key.rawValue) + MemoryLayout.size(ofValue: dataSize) + MemoryLayout.size(ofValue: flags)
+		dataSize +
+		MemoryLayout.size(ofValue: key.rawValue) +
+		MemoryLayout.size(ofValue: dataSize) +
+		MemoryLayout.size(ofValue: flags)
 	}
 	public let value: PartValue
 
@@ -111,6 +114,20 @@ public struct EncodedPart<MagicNumbers: MagicNumber, Flags: PartFlags> {
 		new.append(flags.rawValue.toBytes(endianness: .big))
 		new.append(contentsOf: value.data)
 		return new
+	}
+
+	public func scannerForData() -> DataScanner { DataScanner(data: data) }
+
+	public func child(atIndex index: Int) -> Self {
+		childParts[index]
+	}
+
+	public func children(withKey key: MagicNumbers) -> [Self] {
+		childParts.filter { $0.key == key }
+	}
+
+	public func firstChild(withKey key: MagicNumbers) -> Self? {
+		childParts.first(where: { $0.key == key })
 	}
 
 	public enum PartValue {

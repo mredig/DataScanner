@@ -11,15 +11,15 @@ final class BinaryCodableTests: XCTestCase {
 		}
 		
 		init(from binaryDecoder: BinaryDecodingContainer<MagicNumbers, BasicFlags>) throws {
-			let parts = binaryDecoder.topPart.childParts
+			let rootPart = binaryDecoder.topPart
 
-			var phraseScanner = DataScanner(data: parts[0].data)
+			var phraseScanner = try rootPart.firstChild(withKey: .phrase).unwrap().scannerForData()
 			self.phrase = try phraseScanner.scanStringUntilNullTerminated()
 			
-			var fightersScanner = DataScanner(data: parts[1].data)
+			var fightersScanner = try rootPart.firstChild(withKey: .fighters).unwrap().scannerForData()
 			self.fighters = try fightersScanner.scan(endianness: .big)
 
-			var friendsScanner = DataScanner(data: parts[2].data)
+			var friendsScanner = try rootPart.firstChild(withKey: .friends).unwrap().scannerForData()
 			var friends: [String] = []
 			while friendsScanner.isAtEnd == false {
 				let friend = try friendsScanner.scanStringUntilNullTerminated()
