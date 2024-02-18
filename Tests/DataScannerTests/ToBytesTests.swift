@@ -47,12 +47,16 @@ final class ToBytesTests: XCTestCase {
 	}
 
 	func testToBytesFloatValues() throws {
+		#if arch(arm64)
 		let a: Float16 = -427.25
+		#endif
 		let b: Float32 = -0.468345582
 		let c: Float64 = -4.3128027387708127e+148
 
+		#if arch(arm64)
 		XCTAssertEqual(a.toBytes(endianness: .big).toHexString(), "dead")
 		XCTAssertEqual(a.toBytes(endianness: .little).toHexString(), "adde")
+		#endif
 
 		XCTAssertEqual(b.toBytes(endianness: .big).toHexString(), "beefcafe")
 		XCTAssertEqual(b.toBytes(endianness: .little).toHexString(), "fecaefbe")
