@@ -1,6 +1,6 @@
 import Foundation
 
-public struct BinaryFromMemory<MagicNumbers: MagicNumber, Flags: PartFlags> {
+public struct BinaryEncodingContainer<MagicNumbers: MagicNumber, Flags: PartFlags> {
 	public typealias Part = EncodedPart<MagicNumbers, Flags>
 	public var parts: [Part] = []
 	public let topKey: MagicNumbers
@@ -10,7 +10,7 @@ public struct BinaryFromMemory<MagicNumbers: MagicNumber, Flags: PartFlags> {
 	}
 }
 
-public extension BinaryFromMemory {
+public extension BinaryEncodingContainer {
 	mutating func encodePart(_ part: Part) {
 		parts.append(part)
 	}

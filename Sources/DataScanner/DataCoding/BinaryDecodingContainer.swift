@@ -1,6 +1,6 @@
 import Foundation
 
-public struct BinaryToMemory<MagicNumbers: MagicNumber, Flags: PartFlags> {
+public struct BinaryDecodingContainer<MagicNumbers: MagicNumber, Flags: PartFlags> {
 	public var topPart: EncodedPart<MagicNumbers, Flags>
 	public let topKey: MagicNumbers
 

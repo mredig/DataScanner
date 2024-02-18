@@ -10,7 +10,7 @@ final class BinaryCodableTests: XCTestCase {
 			self.friends = friends
 		}
 		
-		init(from binaryDecoder: BinaryToMemory<MagicNumbers, BasicFlags>) throws {
+		init(from binaryDecoder: BinaryDecodingContainer<MagicNumbers, BasicFlags>) throws {
 			let parts = binaryDecoder.topPart.childParts
 
 			var phraseScanner = DataScanner(data: parts[0].data)
@@ -43,7 +43,7 @@ final class BinaryCodableTests: XCTestCase {
 
 		typealias Flags = BasicFlags
 
-		func encodeToBinaryData(_ coder: inout BinaryFromMemory<MagicNumbers, BasicFlags>) throws {
+		func encodeToBinaryData(_ coder: inout BinaryEncodingContainer<MagicNumbers, BasicFlags>) throws {
 			coder.encodeData(phrase.toBytes(), magicNumber: .phrase)
 			coder.encodeData(fighters.toBytes(), magicNumber: .fighters)
 			let friendsData = friends.reduce(into: Data()) {

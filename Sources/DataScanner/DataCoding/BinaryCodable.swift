@@ -6,7 +6,7 @@ public protocol BinaryDecodable {
 
 	var rootKey: MagicNumbers { get }
 
-	init(from binaryDecoder: BinaryToMemory<MagicNumbers, Flags>) throws
+	init(from binaryDecoder: BinaryDecodingContainer<MagicNumbers, Flags>) throws
 }
 
 public protocol BinaryEncodable {
@@ -15,7 +15,7 @@ public protocol BinaryEncodable {
 
 	var rootKey: MagicNumbers { get }
 
-	func encodeToBinaryData(_ coder: inout BinaryFromMemory<MagicNumbers, Flags>) throws
+	func encodeToBinaryData(_ coder: inout BinaryEncodingContainer<MagicNumbers, Flags>) throws
 }
 
 public protocol BinaryCodable: BinaryEncodable & BinaryDecodable {}
