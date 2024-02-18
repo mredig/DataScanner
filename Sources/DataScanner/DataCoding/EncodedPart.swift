@@ -26,12 +26,6 @@ public struct EncodedPart<MagicNumbers: MagicNumber, Flags: PartFlags> {
 		self.value = value
 	}
 
-	public enum Error: Swift.Error {
-		case invalidMagicNumber(UInt32, MagicNumbers.Type)
-		case insufficientData
-		case corruptedData
-	}
-
 	public struct HeaderData {
 		public let magicNumber: MagicNumbers
 		public let flags: Flags
@@ -122,12 +116,26 @@ public struct EncodedPart<MagicNumbers: MagicNumber, Flags: PartFlags> {
 		childParts[index]
 	}
 
+	/// This not going to get the nth instance of a child with `key`, it will verify that the child at `index` has the provided `key` or throw.
+	public func child(atIndex index: Int, withKey key: MagicNumbers) throws -> Self {
+		let part = child(atIndex: index)
+		guard part.key == key else { throw Error.nonMatchingMagicNumber }
+		return part
+	}
+
 	public func children(withKey key: MagicNumbers) -> [Self] {
 		childParts.filter { $0.key == key }
 	}
 
 	public func firstChild(withKey key: MagicNumbers) -> Self? {
 		childParts.first(where: { $0.key == key })
+	}
+
+	public enum Error: Swift.Error {
+		case invalidMagicNumber(UInt32, MagicNumbers.Type)
+		case insufficientData
+		case corruptedData
+		case nonMatchingMagicNumber
 	}
 
 	public enum PartValue {

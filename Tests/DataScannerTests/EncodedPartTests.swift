@@ -86,7 +86,7 @@ final class EncodedPartTests: XCTestCase {
 		XCTAssertEqual(2, key2Parts.count)
 		let partA = key2Parts[0]
 		let partB = key2Parts[1]
-		let parent1Part = topDecodedParts.children(withKey: .key3)[0]
+		let parent1Part = try topDecodedParts.child(atIndex: 2, withKey: .key3)
 
 		XCTAssertEqual(partA.data, expectedValueA)
 		XCTAssertEqual(partA.flags, [])
@@ -110,6 +110,18 @@ final class EncodedPartTests: XCTestCase {
 		XCTAssertEqual(partC.flags, [])
 		XCTAssertEqual(partC.key, .key5)
 		XCTAssertEqual(partC.data, expectedValueC)
+	}
+
+	func testThrowsWithBadKey() throws {
+		let hexString = """
+			6b6579310000000000000053016b657932000000000000000400deadbeef6b657932000000000000000200deca6b657933000000000\
+			0000026016b6579340000000000000019016b657935000000000000000c00cafefacedecafbabebadc0de
+			"""
+		let data = try Data(hexString: hexString)
+
+		let topDecodedParts = try EncodedPart(decoding: data, magicNumbersType: MagicNumbers.self, flagsType: BasicFlags.self)
+
+		XCTAssertThrowsError(_ = try topDecodedParts.child(atIndex: 1, withKey: .key3))
 	}
 
 	enum Error: Swift.Error {
