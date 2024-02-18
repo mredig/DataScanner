@@ -1,5 +1,8 @@
 import Foundation
 
+/// This is where the binary structure comes into play. You can embed child EncodedParts into others, or just a data blob.
+/// Each EncodedPart (chunk) consists of a magic number (four byte character code), an Int size, any flags, and then the actual data.
+/// The actual data COULD be just another chunk or array of chunks.
 public struct EncodedPart<MagicNumbers: MagicNumber, Flags: PartFlags> {
 	public let key: MagicNumbers
 	public let flags: Flags

@@ -1,5 +1,9 @@
 import Foundation
 
+/// If you set up as an enum (which is probably the easiest), Swift requires that you implement the enum values statically (like a
+/// StaticString, but for UInt32). I tried to use a macro to generate the value from a four character string (which in theory should
+/// work), but it didn't work. Maybe I just don't know enough about macros (which is definitely true). However, until I can determine
+/// a better solution, you can refer to [this table](https://www.utf8-chartable.de) to determine your hex values.
 public protocol MagicNumber: RawRepresentable, Hashable {
 	var rawValue: UInt32 { get }
 
