@@ -11,7 +11,7 @@ final class BinaryCodableTests: XCTestCase {
 		}
 		
 		init(from binaryDecoder: BinaryDecodingContainer<MagicNumbers, BasicFlags>) throws {
-			let rootPart = binaryDecoder.topPart
+			let rootPart = binaryDecoder.rootPart
 
 			var phraseScanner = try rootPart.firstChild(withKey: .phrase).unwrap().scannerForData()
 			self.phrase = try phraseScanner.scanStringUntilNullTerminated()
