@@ -127,8 +127,17 @@ public struct EncodedPart<MagicNumbers: MagicNumber, Flags: PartFlags> {
 		childParts.filter { $0.key == key }
 	}
 
-	public func firstChild(withKey key: MagicNumbers) -> Self? {
-		childParts.first(where: { $0.key == key })
+	/// If you provide any `indexHints`, those indicies will be checked first. If there are no matches, it will proceed
+	/// to check through each child part, searching for the first child with the given key.
+	public func firstChild(withKey key: MagicNumbers, indexHints: [Int] = []) -> Self? {
+		for indexHint in indexHints {
+			guard
+				let childPart = childParts[optional: indexHint],
+				childPart.key == key
+			else { continue }
+			return childPart
+		}
+		return childParts.first(where: { $0.key == key })
 	}
 
 	public enum Error: Swift.Error {

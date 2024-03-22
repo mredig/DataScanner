@@ -4,10 +4,11 @@ import SwiftPizzaSnips
 
 final class BinaryCodableTests: XCTestCase {
 	struct Foo: BinaryCodable, Hashable {
-		init(phrase: String, fighters: Int, friends: [String]) {
+		init(phrase: String, fighters: Int, friends: [String], foes: [String]) {
 			self.phrase = phrase
 			self.fighters = fighters
 			self.friends = friends
+			self.foes = foes
 		}
 		
 		init(from binaryDecoder: BinaryDecodingContainer<MagicNumbers, BasicFlags>) throws {
@@ -26,6 +27,14 @@ final class BinaryCodableTests: XCTestCase {
 				friends.append(friend)
 			}
 			self.friends = friends
+
+			var foesScanner = try rootPart.firstChild(withKey: .foes, indexHints: [4, 3]).unwrap().scannerForData()
+			var foes: [String] = []
+			while foesScanner.isAtEnd == false {
+				let foe = try foesScanner.scanStringUntilNullTerminated()
+				foes.append(foe)
+			}
+			self.foes = foes
 		}
 
 		let rootKey: MagicNumbers = .foo
@@ -33,11 +42,13 @@ final class BinaryCodableTests: XCTestCase {
 		let phrase: String
 		let fighters: Int
 		let friends: [String]
+		let foes: [String]
 
 		enum MagicNumbers: UInt32, MagicNumber {
 			case phrase = 0x70687261
 			case fighters = 0x66697465
 			case friends = 0x6672656E
+			case foes = 0x666F6573
 			case foo = 0x20666F6F
 		}
 
@@ -50,6 +61,10 @@ final class BinaryCodableTests: XCTestCase {
 				$0.append(contentsOf: $1.toBytes(nullTerminated: true))
 			}
 			coder.encodeData(friendsData, magicNumber: .friends)
+			let foesData = foes.reduce(into: Data()) {
+				$0.append(contentsOf: $1.toBytes(nullTerminated: true))
+			}
+			coder.encodeData(foesData, magicNumber: .foes)
 		}
 	}
 
@@ -60,6 +75,10 @@ final class BinaryCodableTests: XCTestCase {
 			"Derek",
 			"Cody",
 			"Kurt"
+		],
+		foes: [
+			"Jimbo",
+			"Himbo",
 		])
 
 	func testEncodingData() throws {
@@ -67,8 +86,9 @@ final class BinaryCodableTests: XCTestCase {
 		let data = try encoder.encode(aTestValue, topKey: .foo)
 
 		let expectedHexString = """
-			20666f6f000000000000004b0170687261000000000000000c00646f206f7220646f206e6f746669746500000000000000080000000\
-			000033cbd8c6672656e000000000000001000446572656b00436f6479004b75727400
+			20666f6f00000000000000640170687261000000000000000c00646f206f7220646f206e6f746669746500000000000000080000000\
+			000033cbd8c6672656e000000000000001000446572656b00436f6479004b75727400666f6573000000000000000c004a696d626f00\
+			48696d626f00
 			"""
 		XCTAssertEqual(expectedHexString, data.toHexString())
 	}
@@ -76,10 +96,10 @@ final class BinaryCodableTests: XCTestCase {
 	func testDecodingData() throws {
 		let decoder = BinaryDecoder()
 		let hexString = """
-			20666f6f000000000000004b0170687261000000000000000c00646f206f7220646f206e6f746669746500000000000000080000000\
-			000033cbd8c6672656e000000000000001000446572656b00436f6479004b75727400
+			20666f6f00000000000000640170687261000000000000000c00646f206f7220646f206e6f746669746500000000000000080000000\
+			000033cbd8c6672656e000000000000001000446572656b00436f6479004b75727400666f6573000000000000000c004a696d626f00\
+			48696d626f00
 			"""
-
 		let data = try Data(hexString: hexString)
 
 		let newValue: Foo = try decoder.decode(from: data, topKey: .foo)
