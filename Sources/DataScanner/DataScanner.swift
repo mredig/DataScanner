@@ -8,9 +8,13 @@ public struct DataScanner {
 
 	public var isAtEnd: Bool { currentOffset == data.endIndex }
 
+	public init(_ scannable: Scannable) {
+		self.data = scannable
+		self.currentOffset = scannable.startIndex
+	}
+
 	public init(data: Data) {
-		self.data = data
-		self.currentOffset = data.startIndex
+		self.init(data)
 	}
 
 	public init(url: URL) throws {
