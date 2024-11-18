@@ -17,13 +17,13 @@ public struct DataScanner {
 		self.init(data)
 	}
 
-	public init(url: URL) throws {
+	public init(url: URL) throws(ScannableFileHandle.Error) {
 		let handle = try ScannableFileHandle(url: url)
 		self.data = handle
 		self.currentOffset = handle.startIndex
 	}
 
-	public mutating func scan<T: BinaryInteger>(endianness: Endianness = .big) throws -> T {
+	public mutating func scan<T: BinaryInteger>(endianness: Endianness = .big) throws(Error) -> T {
 		let size = MemoryLayout<T>.size
 
 		var bytes = try scanBytes(size)
@@ -36,7 +36,7 @@ public struct DataScanner {
 		}
 	}
 
-	public mutating func scan<T: BinaryFloatingPoint>(endianness: Endianness = .big) throws -> T {
+	public mutating func scan<T: BinaryFloatingPoint>(endianness: Endianness = .big) throws(Error) -> T {
 		let size = MemoryLayout<T>.size
 
 		var bytes = try scanBytes(size)
@@ -51,7 +51,7 @@ public struct DataScanner {
 
 	/// Instead of returning the bytes themselves, this returns the number of null bytes.
 	@discardableResult
-	public mutating func scanNullBytes() throws -> Int {
+	public mutating func scanNullBytes() throws(Error) -> Int {
 		var count = 0
 		while try peekByte() == 0 {
 			currentOffset += 1
@@ -61,18 +61,18 @@ public struct DataScanner {
 	}
 
 	@discardableResult
-	public mutating func scanStringUntilNullTerminated() throws -> String {
+	public mutating func scanStringUntilNullTerminated() throws(Error) -> String {
 		let (string, byteCount) = try _peekStringUntilNullTerminated()
 
 		currentOffset += byteCount
 		return string
 	}
 
-	public func peekStringUntilNullTerminated() throws -> String {
+	public func peekStringUntilNullTerminated() throws(Error) -> String {
 		try _peekStringUntilNullTerminated().str
 	}
 
-	private func _peekStringUntilNullTerminated() throws -> (str: String, byteCount: Int) {
+	private func _peekStringUntilNullTerminated() throws(Error) -> (str: String, byteCount: Int) {
 		var buffer = ""
 		var copy = self
 		copy.data = copy.data.copyIfNeeded()
@@ -83,45 +83,45 @@ public struct DataScanner {
 				buffer.append(character)
 				character = try copy.scanUTF8Character()
 			}
-		} catch Error.nullTerminated {
+		} catch .nullTerminated {
 			return (buffer, copy.currentOffset - startOffset + 1) // include null char
-		} catch Error.isAtEnd {
+		} catch .isAtEnd {
 			return (buffer, copy.currentOffset - startOffset)
 		}
 	}
 
 	@discardableResult
-	public mutating func scanString(byteCount: Int, encoding: String.Encoding = .utf8) throws -> String {
+	public mutating func scanString(byteCount: Int, encoding: String.Encoding = .utf8) throws(Error) -> String {
 		let string = try peekString(byteCount: byteCount, encoding: encoding)
 
 		currentOffset += byteCount
 		return string
 	}
 
-	public func peekString(byteCount: Int, encoding: String.Encoding = .utf8) throws -> String {
+	public func peekString(byteCount: Int, encoding: String.Encoding = .utf8) throws(Error) -> String {
 		let bytes = try peekBytes(byteCount)
 
 		guard
 			let string = String(data: bytes, encoding: encoding)
-		else { throw Error.invalidCharacter }
+		else { throw .invalidCharacter }
 
 		return string
 	}
 
-	public mutating func scanUTF8Character() throws -> Character {
+	public mutating func scanUTF8Character() throws(Error) -> Character {
 		let (char, count) = try _peekUTF8Character()
 
 		currentOffset += count
 		return char
 	}
 
-	public func peekUTF8Character() throws -> Character {
+	public func peekUTF8Character() throws(Error) -> Character {
 		try _peekUTF8Character().char
 	}
 
-	private func _peekUTF8Character() throws -> (char: Character, byteCount: Int) {
+	private func _peekUTF8Character() throws(Error) -> (char: Character, byteCount: Int) {
 		let firstByte = try peekByte()
-		guard firstByte != 0 else { throw Error.nullTerminated }
+		guard firstByte != 0 else { throw .nullTerminated }
 
 		let bytes: Data
 		let analysis = CharacterAnalyst.analyzeByte(firstByte)
@@ -135,41 +135,41 @@ public struct DataScanner {
 			bytes = try peekBytes(2)
 			guard
 				confirmBytesAreContinuation(bytes[1...])
-			else { throw Error.invalidCharacter}
+			else { throw .invalidCharacter }
 		case .threeByte:
 			bytes = try peekBytes(3)
 			guard
 				confirmBytesAreContinuation(bytes[1...])
-			else { throw Error.invalidCharacter}
+			else { throw .invalidCharacter }
 		case .fourByte:
 			bytes = try peekBytes(4)
 			guard
 				confirmBytesAreContinuation(bytes[1...])
-			else { throw Error.invalidCharacter}
+			else { throw .invalidCharacter }
 		case .continuationByte, .illegalByte:
-			throw Error.invalidCharacter
+			throw .invalidCharacter
 		}
 
 		guard
 			let str = String(data: bytes, encoding: .utf8),
 			str.count == 1,
 			let char = str.first
-		else { throw Error.invalidCharacter }
+		else { throw .invalidCharacter }
 
 		return (char, bytes.count)
 	}
 
 	/// Outputs the current byte, then advances by one.
 	@discardableResult
-	public mutating func scanByte() throws -> UInt8 {
+	public mutating func scanByte() throws(Error) -> UInt8 {
 		let byte = try peekByte()
 
 		currentOffset += 1
 		return byte
 	}
 
-	public func peekByte() throws -> UInt8 {
-		guard isAtEnd == false else { throw Error.isAtEnd }
+	public func peekByte() throws(Error) -> UInt8 {
+		guard isAtEnd == false else { throw .isAtEnd }
 		let byte = data[currentOffset]
 
 		return byte
@@ -178,7 +178,7 @@ public struct DataScanner {
 	/// Provides each byte in a Data object. If `count` is negative, bytes start at the lower index and end
 	/// at `currentIndex - 1`. `count` must keep the resulting index within the range of available data.
 	@discardableResult
-	public mutating func scanBytes(_ count: Int) throws -> Data {
+	public mutating func scanBytes(_ count: Int) throws(Error) -> Data {
 		let endOffset = currentOffset + count
 		let bytes = try peekBytes(count)
 
@@ -186,14 +186,14 @@ public struct DataScanner {
 		return bytes
 	}
 
-	public func peekBytes(_ count: Int) throws -> Data {
+	public func peekBytes(_ count: Int) throws(Error) -> Data {
 		let endOffset = currentOffset + count
 		let bytes: Data
 		if count >= 0 {
-			guard endOffset <= data.endIndex else { throw Error.overflowError }
+			guard endOffset <= data.endIndex else { throw .overflowError }
 			bytes = Data(data[currentOffset..<endOffset])
 		} else {
-			guard endOffset >= data.startIndex else { throw Error.overflowError }
+			guard endOffset >= data.startIndex else { throw .overflowError }
 			bytes = Data(data[endOffset..<currentOffset].reversed())
 		}
 

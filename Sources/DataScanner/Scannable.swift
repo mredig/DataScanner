@@ -15,21 +15,27 @@ extension Data: Scannable {
 }
 
 /// All Filehandles should be privately instantiated and therefore qualify for force try usage (it would only fail if it's a socket, pipe, or if descriptor is closed)
-final class ScannableFileHandle: Scannable {
-	var startIndex: Int { 0 }
-	var endIndex: Int { count }
+public final class ScannableFileHandle: Scannable {
+	public var startIndex: Int { 0 }
+	public var endIndex: Int { count }
 
-	let count: Int
+	public let count: Int
 
 	private let url: URL
 	private let fileHandle: FileHandle
 
-	init(url: URL) throws {
+	init(url: URL) throws(Error) {
 		self.url = url
 		guard
 			url.isFileURL
 		else { throw Error.mustBeFileURL }
-		let fileHandle = try FileHandle(forReadingFrom: url)
+		let fileHandle = try { () throws(Error) -> FileHandle in
+			do {
+				return try FileHandle(forReadingFrom: url)
+			} catch {
+				throw Error.fileHandleError(error)
+			}
+		}()
 		self.fileHandle = fileHandle
 
 		let fd = fileHandle.fileDescriptor
@@ -55,7 +61,7 @@ final class ScannableFileHandle: Scannable {
 		fatalError("init(coder:) has not been implemented")
 	}
 
-	subscript(offset: Int) -> UInt8 {
+	public subscript(offset: Int) -> UInt8 {
 		let currentOffset = try! self.fileHandle.offset()
 		try! fileHandle.seek(toOffset: UInt64(offset))
 		let data = try! fileHandle.read(upToCount: 1)
@@ -63,7 +69,7 @@ final class ScannableFileHandle: Scannable {
 		return data![0]
 	}
 
-	subscript(range: Range<Int>) -> Data {
+	public subscript(range: Range<Int>) -> Data {
 		let currentOffset = try! self.fileHandle.offset()
 		try! fileHandle.seek(toOffset: UInt64(range.lowerBound))
 		let data = try! fileHandle.read(upToCount: range.count)
@@ -71,7 +77,7 @@ final class ScannableFileHandle: Scannable {
 		return data!
 	}
 
-	func copyIfNeeded() -> ScannableFileHandle {
+	public func copyIfNeeded() -> ScannableFileHandle {
 		var this = self
 		guard
 			isKnownUniquelyReferenced(&this) == false
@@ -81,9 +87,10 @@ final class ScannableFileHandle: Scannable {
 		return new
 	}
 
-	enum Error: Swift.Error {
+	public enum Error: Swift.Error {
 		case mustBeFileURL
 		case cannotStatFile
 		case cannotBeASocketOrPipeURL
+		case fileHandleError(Swift.Error)
 	}
 }
