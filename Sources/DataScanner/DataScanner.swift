@@ -159,12 +159,72 @@ public struct DataScanner {
 		return (char, bytes.count)
 	}
 
+	@discardableResult
+	public mutating func scanString(through condition: (String) -> Bool) -> String {
+		let (str, count) = _peekString(through: condition)
+
+		currentOffset += count
+		return str
+	}
+
+	public func peekString(through condition: (String) -> Bool) -> String {
+		_peekString(through: condition).str
+	}
+
+	private func _peekString(through condition: (String) -> Bool) -> (str: String, byteCount: Int) {
+		var accumulator = ""
+
+		let startOffset = currentOffset
+
+		let byteCount: Int
+		var copy = self
+		copy.data = data.copyIfNeeded()
+		while condition(accumulator) {
+			do {
+				let character = try copy.scanUTF8Character()
+				accumulator.append(character)
+			} catch .nullTerminated {
+				byteCount = copy.currentOffset - startOffset + 1
+				return (accumulator, byteCount)
+			} catch {
+				byteCount = copy.currentOffset - startOffset
+				return (accumulator, byteCount)
+			}
+		}
+		byteCount = copy.currentOffset - startOffset
+
+		return (accumulator, byteCount)
+	}
+
+	@discardableResult
+	public mutating func scanBytes(through condition: ([UInt8]) -> Bool) -> [UInt8] {
+		let bytes = peekBytes(through: condition)
+		currentOffset += bytes.count
+
+		return bytes
+	}
+
+	public func peekBytes(through condition: ([UInt8]) -> Bool) -> [UInt8] {
+		var bytes: [UInt8] = []
+
+		var peekOffset = currentOffset
+		while peekOffset < data.endIndex {
+			defer { peekOffset += 1 }
+			bytes.append(data[peekOffset])
+			
+			if condition(bytes) {
+				return bytes
+			}
+		}
+		return bytes
+	}
+
 	/// Outputs the current byte, then advances by one.
 	@discardableResult
 	public mutating func scanByte() throws(Error) -> UInt8 {
 		let byte = try peekByte()
-
 		currentOffset += 1
+
 		return byte
 	}
 
