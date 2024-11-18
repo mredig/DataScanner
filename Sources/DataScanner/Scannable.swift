@@ -1,6 +1,6 @@
 import Foundation
 
-protocol Scannable {
+public protocol Scannable {
 	var count: Int { get }
 	var startIndex: Int { get }
 	var endIndex: Int { get }
@@ -11,7 +11,7 @@ protocol Scannable {
 }
 
 extension Data: Scannable {
-	func copyIfNeeded() -> Data { self }
+	public func copyIfNeeded() -> Data { self }
 }
 
 /// All Filehandles should be privately instantiated and therefore qualify for force try usage (it would only fail if it's a socket, pipe, or if descriptor is closed)
