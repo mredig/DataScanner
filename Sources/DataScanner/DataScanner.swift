@@ -205,7 +205,6 @@ public struct DataScanner {
 		case overflowError
 		case invalidCharacter
 		case nullTerminated
-		case mustBeFileURL
 	}
 
 	package enum CharacterAnalyst {
