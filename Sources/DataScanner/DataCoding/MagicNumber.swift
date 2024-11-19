@@ -19,11 +19,20 @@ public extension MagicNumber {
 	}
 
 	init?(data: Data) {
+		self.init(data: data, endianness: .big)
+	}
+
+	init?(data: Data, endianness: Endianness) {
 		guard data.count == 4 else {
 			return nil
 		}
 		let value = data.withUnsafeBytes { pointer in
-			pointer.load(as: UInt32.self)
+			switch endianness {
+			case .little:
+				pointer.load(as: UInt32.self).littleEndian
+			case .big:
+				pointer.load(as: UInt32.self).bigEndian
+			}
 		}
 		self.init(rawValue: value)
 	}
