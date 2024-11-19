@@ -10,7 +10,11 @@ import SwiftPizzaSnips
 /// `currentOffset` by the amount of bytes that they consume.
 ///
 /// It is okay to modify `currentOffset` as long as the value remains within the range of
-/// `data.startIndex..<data.endIndex`, but this is not enforced. Failing to follow this rule can result in undefined behavior.
+/// `data.startIndex..<data.endIndex`, but this is not enforced. Failing to follow this rule can
+/// result in undefined behavior.
+///
+/// Error handling with is considered a bit experimental. Typed throws is definitely desired, but the
+/// compositional strategy used may change upon new features or epiphanies.
 public struct DataScanner {
 	private var data: Scannable
 
@@ -35,7 +39,7 @@ public struct DataScanner {
 
 	/// Scans the next `MemoryLayout<T>.size` bytes and loads them as type `T` with provided `Endianness`.
 	/// If the remaining bytes are insufficient, throws `Error.overflowError`
-	public mutating func scan<T: BinaryInteger>(endianness: Endianness = .big) throws(Error) -> T {
+	public mutating func scan<T: BinaryInteger>(endianness: Endianness = .big) throws(OverflowError) -> T {
 		let size = MemoryLayout<T>.size
 
 		var bytes = try scanBytes(size)
@@ -50,7 +54,7 @@ public struct DataScanner {
 
 	/// Scans the next `MemoryLayout<T>.size` bytes and loads them as type `T` with provided `Endianness`.
 	/// If the remaining bytes are insufficient, throws `Error.overflowError`
-	public mutating func scan<T: BinaryFloatingPoint>(endianness: Endianness = .big) throws(Error) -> T {
+	public mutating func scan<T: BinaryFloatingPoint>(endianness: Endianness = .big) throws(OverflowError) -> T {
 		let size = MemoryLayout<T>.size
 
 		var bytes = try scanBytes(size)
@@ -65,7 +69,7 @@ public struct DataScanner {
 
 	/// Instead of returning the bytes themselves, this returns the number of null bytes.
 	@discardableResult
-	public mutating func scanNullBytes() throws(Error) -> Int {
+	public mutating func scanNullBytes() throws(ScanError) -> Int {
 		var count = 0
 		while try peekByte() == 0 {
 			currentOffset += 1
@@ -76,7 +80,7 @@ public struct DataScanner {
 
 	/// Scans bytes until a null byte is encountered and the string is returned.
 	@discardableResult
-	public mutating func scanStringUntilNullTerminated() throws(Error) -> String {
+	public mutating func scanStringUntilNullTerminated() throws(CharError) -> String {
 		let (string, byteCount) = try _peekStringUntilNullTerminated()
 
 		currentOffset += byteCount
@@ -84,11 +88,11 @@ public struct DataScanner {
 	}
 
 	/// Peeks bytes until a null byte is encountered and the string is returned.
-	public func peekStringUntilNullTerminated() throws(Error) -> String {
+	public func peekStringUntilNullTerminated() throws(CharError) -> String {
 		try _peekStringUntilNullTerminated().str
 	}
 
-	private func _peekStringUntilNullTerminated() throws(Error) -> (str: String, byteCount: Int) {
+	private func _peekStringUntilNullTerminated() throws(CharError) -> (str: String, byteCount: Int) {
 		var buffer = ""
 		var copy = self
 		copy.data = copy.data.copyIfNeeded()
@@ -111,7 +115,7 @@ public struct DataScanner {
 	/// reached (`Error.overflowError`), or the byte sequence does not comprise a
 	/// valid `String` (`Error.invalidCharacter`)
 	@discardableResult
-	public mutating func scanString(byteCount: Int, encoding: String.Encoding = .utf8) throws(Error) -> String {
+	public mutating func scanString(byteCount: Int, encoding: String.Encoding = .utf8) throws(CharError) -> String {
 		let string = try peekString(byteCount: byteCount, encoding: encoding)
 
 		currentOffset += byteCount
@@ -122,8 +126,8 @@ public struct DataScanner {
 	/// Throws in the event that the end of the data is reached before `byteCount` is
 	/// reached (`Error.overflowError`), or the byte sequence does not comprise a
 	/// valid `String` (`Error.invalidCharacter`)
-	public func peekString(byteCount: Int, encoding: String.Encoding = .utf8) throws(Error) -> String {
-		let bytes = try peekBytes(byteCount)
+	public func peekString(byteCount: Int, encoding: String.Encoding = .utf8) throws(CharError) -> String {
+		let bytes = try CharError.Result(overflow: peekBytes(byteCount)).get()
 
 		guard
 			let string = String(data: bytes, encoding: encoding)
@@ -136,7 +140,7 @@ public struct DataScanner {
 	/// (`Error.nullTerminated`), if the end of the data is reached before a `Character` is
 	/// completed (`Error.overflowError`), or the byte sequence does not comprise a
 	/// valid `Character` (`Error.invalidCharacter`)
-	public mutating func scanUTF8Character() throws(Error) -> Character {
+	public mutating func scanUTF8Character() throws(CharError) -> Character {
 		let (char, count) = try _peekUTF8Character()
 
 		currentOffset += count
@@ -147,12 +151,12 @@ public struct DataScanner {
 	/// (`Error.nullTerminated`), if the end of the data is reached before a `Character` is
 	/// completed (`Error.overflowError`), or the byte sequence does not comprise a
 	/// valid `Character` (`Error.invalidCharacter`)
-	public func peekUTF8Character() throws(Error) -> Character {
+	public func peekUTF8Character() throws(CharError) -> Character {
 		try _peekUTF8Character().char
 	}
 
-	private func _peekUTF8Character() throws(Error) -> (char: Character, byteCount: Int) {
-		let firstByte = try peekByte()
+	private func _peekUTF8Character() throws(CharError) -> (char: Character, byteCount: Int) {
+		let firstByte = try CharError.Result(scan: peekByte()).get()
 		guard firstByte != 0 else { throw .nullTerminated }
 
 		let bytes: Data
@@ -164,17 +168,17 @@ public struct DataScanner {
 		case .oneByte:
 			bytes = Data([firstByte])
 		case .twoByte:
-			bytes = try peekBytes(2)
+			bytes = try CharError.Result(overflow: peekBytes(2)).get()
 			guard
 				confirmBytesAreContinuation(bytes[1...])
 			else { throw .invalidCharacter }
 		case .threeByte:
-			bytes = try peekBytes(3)
+			bytes = try CharError.Result(overflow: peekBytes(3)).get()
 			guard
 				confirmBytesAreContinuation(bytes[1...])
 			else { throw .invalidCharacter }
 		case .fourByte:
-			bytes = try peekBytes(4)
+			bytes = try CharError.Result(overflow: peekBytes(4)).get()
 			guard
 				confirmBytesAreContinuation(bytes[1...])
 			else { throw .invalidCharacter }
@@ -261,7 +265,7 @@ public struct DataScanner {
 
 	/// Outputs the current byte, then advances by one unless the scanner is at the end of the data.
 	@discardableResult
-	public mutating func scanByte() throws(Error) -> UInt8 {
+	public mutating func scanByte() throws(ScanError) -> UInt8 {
 		let byte = try peekByte()
 		currentOffset += 1
 
@@ -269,7 +273,7 @@ public struct DataScanner {
 	}
 
 	/// Peeks the next byte unless the scanner is at the end of the data.
-	public func peekByte() throws(Error) -> UInt8 {
+	public func peekByte() throws(ScanError) -> UInt8 {
 		guard isAtEnd == false else { throw .isAtEnd }
 		let byte = data[currentOffset]
 
@@ -280,7 +284,7 @@ public struct DataScanner {
 	/// at `currentIndex - 1`. `count` must keep the resulting index within the range of available data,
 	/// otherwise throws `Error.overflowError`
 	@discardableResult
-	public mutating func scanBytes(_ count: Int) throws(Error) -> Data {
+	public mutating func scanBytes(_ count: Int) throws(OverflowError) -> Data {
 		let endOffset = currentOffset + count
 		let bytes = try peekBytes(count)
 
@@ -291,25 +295,94 @@ public struct DataScanner {
 	/// Provides each byte in a Data object. If `count` is negative, bytes start at the lower index and end
 	/// at `currentIndex - 1`. `count` must keep the resulting index within the range of available data,
 	/// otherwise throws `Error.overflowError`
-	public func peekBytes(_ count: Int) throws(Error) -> Data {
+	public func peekBytes(_ count: Int) throws(OverflowError) -> Data {
 		let endOffset = currentOffset + count
 		let bytes: Data
 		if count >= 0 {
-			guard endOffset <= data.endIndex else { throw .overflowError }
+			guard endOffset <= data.endIndex else { throw .overflow }
 			bytes = Data(data[currentOffset..<endOffset])
 		} else {
-			guard endOffset >= data.startIndex else { throw .overflowError }
+			guard endOffset >= data.startIndex else { throw .overflow }
 			bytes = Data(data[endOffset..<currentOffset].reversed())
 		}
 
 		return bytes
 	}
 
-	public enum Error: Swift.Error {
+	public enum CharError: Error {
 		case isAtEnd
 		case overflowError
 		case invalidCharacter
 		case nullTerminated
+
+		enum Result<T> {
+			case success(T)
+			case failure(CharError)
+
+			init(overflow block: @autoclosure () throws(OverflowError) -> T) {
+				do {
+					let result = try block()
+					self = .success(result)
+				} catch {
+					self = .failure(.overflowError)
+				}
+			}
+
+			init(scan block: @autoclosure () throws(ScanError) -> T) {
+				do {
+					let result = try block()
+					self = .success(result)
+				} catch {
+					switch error {
+					case .isAtEnd:
+						self = .failure(.isAtEnd)
+					case .overflowError:
+						self = .failure(.overflowError)
+					}
+				}
+			}
+
+			func get() throws(CharError) -> T {
+				switch self {
+				case .success(let t):
+					return t
+				case .failure(let error):
+					throw error
+				}
+			}
+		}
+	}
+
+	public enum ScanError: Error {
+		case isAtEnd
+		case overflowError
+
+		enum Result<T> {
+			case success(T)
+			case failure(ScanError)
+
+			init(_ block: @autoclosure () throws(OverflowError) -> T) {
+				do {
+					let result = try block()
+					self = .success(result)
+				} catch {
+					self = .failure(.overflowError)
+				}
+			}
+
+			func get() throws(ScanError) -> T {
+				switch self {
+				case .success(let t):
+					return t
+				case .failure(let error):
+					throw error
+				}
+			}
+		}
+	}
+
+	public enum OverflowError: Error {
+		case overflow
 	}
 
 	package enum CharacterAnalyst {
