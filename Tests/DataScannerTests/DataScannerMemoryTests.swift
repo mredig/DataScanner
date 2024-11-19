@@ -88,6 +88,19 @@ struct DataScannerMemoryTests {
 		}
 	}
 
+	@Test func scanStringBytes() async throws {
+		let inputHex = "666F6F20626172200000666F6F20626172200000"
+		let inputData = try Data(hexString: inputHex)
+
+		var scanner = DataScanner(inputData)
+
+		let firstString = try scanner.scanString(byteCount: 4)
+		#expect(firstString == "foo ")
+
+		let secondString = try scanner.scanString(byteCount: 2)
+		#expect(secondString == "ba")
+	}
+
 	@Test func scanUnicodeChars() throws {
 		let inputHex = "f09f9fa7f09fa5b0e1baa2e284b3e28899c380"
 
@@ -100,6 +113,70 @@ struct DataScannerMemoryTests {
 		while let char = try? scanner.scanUTF8Character() {
 			#expect(expected[currentIndex] == char)
 			currentIndex = expected.index(after: currentIndex)
+		}
+	}
+
+	@Test func peekUnicodeChars() throws {
+		let inputHex = "f09f9fa7f09fa5b0e1baa2e284b3e28899c380"
+
+		let data = try Data(hexString: inputHex)
+
+		let scanner = DataScanner(data: data)
+
+		let expected = "🟧🥰Ảℳ∙À"
+		let char = try scanner.peekUTF8Character()
+		#expect(expected.first == char)
+	}
+
+	@Test func conditionalStringScan() throws {
+		let inputHex = """
+			5375626A6563743A20466F6F0A46726F6D3A20686540686F2E68756D0D0A0D0\
+			A4461746120666F6F206261722062617A20626C6520626F6F
+			"""
+		let inputData = try Data(hexString: inputHex)
+
+		var scanner = DataScanner(inputData)
+
+		let peeked = scanner.peekString(through: { $0.hasSuffix("\r\n\r\n") })
+
+		let string = scanner.scanString(through: { $0.hasSuffix("\r\n\r\n") })
+		let expectation = """
+			Subject: Foo
+			From: he@ho.hum\r\n\r\n
+			"""
+		#expect(peeked == expectation)
+		#expect(string == expectation)
+
+		let endExpectation = "Data foo bar baz ble boo"
+		let scanThroughEnd = scanner.scanString(through: { $0.hasSuffix("\r\n\r\n") })
+		#expect(scanThroughEnd == endExpectation)
+	}
+
+	@Test func conditionalByteScan() throws {
+		let inputHex = "666F6F20626172200000666F6F20626172200000"
+		let inputData = try Data(hexString: inputHex)
+
+		var scanner = DataScanner(data: inputData)
+
+		let bytes = scanner.scanBytes(through: { $0.last == 0 })
+		let data = Data(bytes.dropLast())
+
+		let str = String(decoding: data, as: UTF8.self)
+		#expect("foo bar " == str)
+		#expect(scanner.currentOffset == 9)
+	}
+
+	@Test func byteScan() throws {
+		let inputHex = "f09f9fa7f09fa5b0e1baa2e284b3e28899c380"
+
+		let data = try Data(hexString: inputHex)
+
+		var scanner = DataScanner(data: data)
+
+		let expected = Array(data)
+
+		for byte in expected {
+			#expect(try scanner.scanByte() == byte)
 		}
 	}
 

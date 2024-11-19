@@ -219,7 +219,7 @@ public struct DataScanner {
 		let byteCount: Int
 		var copy = self
 		copy.data = data.copyIfNeeded()
-		while condition(accumulator) {
+		while condition(accumulator) == false {
 			do {
 				let character = try copy.scanUTF8Character()
 				accumulator.append(character)
