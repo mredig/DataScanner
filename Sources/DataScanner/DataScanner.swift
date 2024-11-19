@@ -196,22 +196,22 @@ public struct DataScanner {
 	}
 
 	/// Scans `Character`s until `condition` is met and returns the accumulated `Character`s. `Character`s are accumulated with each iteration,
-	/// then once `condition` returns `true`, the entire accumulation (including the `Character` that was appended for the `true` condition) is returned.
+	/// then once `condition` returns `false`, the entire accumulation (including the `Character` that was appended for the `false` condition) is returned.
 	@discardableResult
-	public mutating func scanString(through condition: (String) -> Bool) -> String {
-		let (str, count) = _peekString(through: condition)
+	public mutating func scanString(while condition: (String) -> Bool) -> String {
+		let (str, count) = _peekString(while: condition)
 
 		currentOffset += count
 		return str
 	}
 
 	/// Peeks `Character`s until `condition` is met and returns the accumulated `Character`s. `Character`s are accumulated with each iteration,
-	/// then once `condition` returns `true`, the entire accumulation (including the `Character` that was appended for the `true` condition) is returned.
-	public func peekString(through condition: (String) -> Bool) -> String {
-		_peekString(through: condition).str
+	/// then once `condition` returns `false`, the entire accumulation (including the `Character` that was appended for the `false` condition) is returned.
+	public func peekString(while condition: (String) -> Bool) -> String {
+		_peekString(while: condition).str
 	}
 
-	private func _peekString(through condition: (String) -> Bool) -> (str: String, byteCount: Int) {
+	private func _peekString(while condition: (String) -> Bool) -> (str: String, byteCount: Int) {
 		var accumulator = ""
 
 		let startOffset = currentOffset
@@ -219,7 +219,7 @@ public struct DataScanner {
 		let byteCount: Int
 		var copy = self
 		copy.data = data.copyIfNeeded()
-		while condition(accumulator) == false {
+		while condition(accumulator) {
 			do {
 				let character = try copy.scanUTF8Character()
 				accumulator.append(character)
@@ -237,28 +237,24 @@ public struct DataScanner {
 	}
 
 	/// Scans bytes until `condition` is met and returns the accumulated bytes. Bytes are accumulated with each iteration,
-	/// then once `condition` returns `true`, the entire accumulation (including the byte that was appended for the `true` condition) is returned.
+	/// then once `condition` returns `false`, the entire accumulation (including the byte that was appended for the `false` condition) is returned.
 	@discardableResult
-	public mutating func scanBytes(through condition: ([UInt8]) -> Bool) -> [UInt8] {
-		let bytes = peekBytes(through: condition)
+	public mutating func scanBytes(while condition: ([UInt8]) -> Bool) -> [UInt8] {
+		let bytes = peekBytes(while: condition)
 		currentOffset += bytes.count
 
 		return bytes
 	}
 
 	/// Peeks bytes until `condition` is met and returns the accumulated bytes. Bytes are accumulated with each iteration,
-	/// then once `condition` returns `true`, the entire accumulation (including the byte that was appended for the `true` condition) is returned.
-	public func peekBytes(through condition: ([UInt8]) -> Bool) -> [UInt8] {
+	/// then once `condition` returns `false`, the entire accumulation (including the byte that was appended for the `false` condition) is returned.
+	public func peekBytes(while condition: ([UInt8]) -> Bool) -> [UInt8] {
 		var bytes: [UInt8] = []
 
 		var peekOffset = currentOffset
-		while peekOffset < data.endIndex {
+		while peekOffset < data.endIndex, condition(bytes) {
 			defer { peekOffset += 1 }
 			bytes.append(data[peekOffset])
-			
-			if condition(bytes) {
-				return bytes
-			}
 		}
 		return bytes
 	}

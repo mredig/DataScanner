@@ -137,9 +137,9 @@ struct DataScannerMemoryTests {
 
 		var scanner = DataScanner(inputData)
 
-		let peeked = scanner.peekString(through: { $0.hasSuffix("\r\n\r\n") })
+		let peeked = scanner.peekString(while: { $0.hasSuffix("\r\n\r\n") == false })
 
-		let string = scanner.scanString(through: { $0.hasSuffix("\r\n\r\n") })
+		let string = scanner.scanString(while: { $0.hasSuffix("\r\n\r\n") == false })
 		let expectation = """
 			Subject: Foo
 			From: he@ho.hum\r\n\r\n
@@ -148,7 +148,7 @@ struct DataScannerMemoryTests {
 		#expect(string == expectation)
 
 		let endExpectation = "Data foo bar baz ble boo"
-		let scanThroughEnd = scanner.scanString(through: { $0.hasSuffix("\r\n\r\n") })
+		let scanThroughEnd = scanner.scanString(while: { $0.hasSuffix("\r\n\r\n") == false })
 		#expect(scanThroughEnd == endExpectation)
 	}
 
@@ -158,7 +158,7 @@ struct DataScannerMemoryTests {
 
 		var scanner = DataScanner(data: inputData)
 
-		let bytes = scanner.scanBytes(through: { $0.last == 0 })
+		let bytes = scanner.scanBytes(while: { $0.last != 0 })
 		let data = Data(bytes.dropLast())
 
 		let str = String(decoding: data, as: UTF8.self)
