@@ -8,6 +8,10 @@ public struct DataScanner {
 
 	public var isAtEnd: Bool { currentOffset == data.endIndex }
 
+	/// Allows you to provide a default `Endianness` for methods like `.scan(endianness: Endianness? = nil)`.
+	/// When you don't provide a value directly in the method invocation, the endianness of this value will be used.
+	public var defaultEndianness: Endianness = .big
+
 	public init(_ scannable: Scannable) {
 		self.data = scannable
 		self.currentOffset = scannable.startIndex
@@ -23,7 +27,10 @@ public struct DataScanner {
 		self.currentOffset = handle.startIndex
 	}
 
-	public mutating func scan<T: BinaryInteger>(endianness: Endianness = .big) throws -> T {
+	/// Scans the next `MemoryLayout<T>.size` bytes and loads them as type `T` with provided `Endianness`.
+	/// If the remaining bytes are insufficient, throws `Error.overflowError`
+	public mutating func scan<T: BinaryInteger>(endianness: Endianness? = nil) throws -> T {
+		let endianness = endianness ?? defaultEndianness
 		let size = MemoryLayout<T>.size
 
 		var bytes = try scanBytes(size)
@@ -36,7 +43,10 @@ public struct DataScanner {
 		}
 	}
 
-	public mutating func scan<T: BinaryFloatingPoint>(endianness: Endianness = .big) throws -> T {
+	/// Scans the next `MemoryLayout<T>.size` bytes and loads them as type `T` with provided `Endianness`.
+	/// If the remaining bytes are insufficient, throws `Error.overflowError`
+	public mutating func scan<T: BinaryFloatingPoint>(endianness: Endianness? = nil) throws -> T {
+		let endianness = endianness ?? defaultEndianness
 		let size = MemoryLayout<T>.size
 
 		var bytes = try scanBytes(size)

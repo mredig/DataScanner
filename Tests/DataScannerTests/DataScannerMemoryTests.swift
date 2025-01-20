@@ -21,6 +21,26 @@ final class DataScannerMemoryTests: XCTestCase {
 		XCTAssertEqual(-4.0279909842408473e+279, doubleLE2)
 	}
 
+	func testScanDoubleWithDefaultEndianness() throws {
+		let inputHex = "1880E32EE5124AD0B903FA814E67FCF9"
+
+		let data = try Data(hexString: inputHex)
+
+		var scanner = DataScanner(data: data)
+		scanner.defaultEndianness = .big
+
+		let doubleBE1: Double = try scanner.scan()
+		XCTAssertEqual(1.1844491647066381e-190, doubleBE1)
+		let doubleBE2: Double = try scanner.scan()
+		XCTAssertEqual(-4.8096574843181661e-34, doubleBE2)
+		scanner.currentOffset = 0
+		scanner.defaultEndianness = .little
+		let doubleLE1: Double = try scanner.scan()
+		XCTAssertEqual(-6.0382817660725676e+78, doubleLE1)
+		let doubleLE2: Double = try scanner.scan()
+		XCTAssertEqual(-4.0279909842408473e+279, doubleLE2)
+	}
+
 	func testScanInt() throws {
 		let inputHex = "1880E32EE5124AD0B903FA814E67FCF9"
 
