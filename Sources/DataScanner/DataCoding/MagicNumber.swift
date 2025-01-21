@@ -13,6 +13,17 @@ public protocol MagicNumber: RawRepresentable, Hashable {
 }
 
 public extension MagicNumber {
+	/// Provides the string value in the event that each byte maps to a valid UTF8 character
+	var stringValue: String? {
+		let buffer = UnsafeMutableBufferPointer<RawValue>.allocate(capacity: 1)
+		buffer.initialize(repeating: rawValue)
+		defer { buffer.deallocate() }
+		let byteBuffer = UnsafeRawBufferPointer(buffer)
+		let bytes = Data(byteBuffer)
+
+		return String(data: bytes, encoding: .utf8)
+	}
+
 	init?(stringValue: String) {
 		let data = Data(stringValue.utf8)
 		self.init(data: data)
