@@ -18,7 +18,19 @@ struct MagicNumberTests {
 	}
 
 	@Test func createFromString() throws {
-		let number = MagicNumbers(stringValue: "fite")
+		let number = MagicNumbers(stringValue: "fite", endianness: .big)
+
+		#expect(number == .fighters)
+	}
+
+	@Test func createFromData() throws {
+		let data = Data([
+			0x66,
+			0x69,
+			0x74,
+			0x65,
+		])
+		let number = MagicNumbers(data: data, endianness: .big)
 
 		#expect(number == .fighters)
 	}
@@ -28,8 +40,13 @@ struct MagicNumberTests {
 	}
 
 	@Test func readHexBytes() async throws {
-		print(MagicNumbers.fighters.hexBytes)
+		let bigEndianData = Data([
+			0x66,
+			0x69,
+			0x74,
+			0x65,
+		])
+
+		#expect(MagicNumbers.fighters.getBytes(endianness: .big) == bigEndianData)
 	}
-
 }
-
